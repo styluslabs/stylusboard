@@ -1,0 +1,6 @@
+{
+  "db": "/home/mwhite/cloud/stylusdata/cloudwrite.sqlite",
+  "log-level": "debug",
+  "log-path": null,
+  "allow-anon": true
+}
