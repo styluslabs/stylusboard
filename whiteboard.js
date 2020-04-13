@@ -189,13 +189,7 @@ var apiserver = http.createServer(function (request, response)
       return;
     }
     if(!whiteboards[repo]) {
-      var a = [];
-      for(var k in args) {
-        if(args.hasOwnProperty(k)) {
-          a.push(k + "='" + args[k] + "'");
-        }
-      }
-      whiteboards[repo] = new Whiteboard(repo, a.join(" "), rndstr());
+      whiteboards[repo] = new Whiteboard(repo, Object.entries(args).map(e=>e[0]+"='"+e[1]+"'").join(" "), rndstr());
     }
     var wb = whiteboards[repo];
     var token = md5(session.user + wb.token);
