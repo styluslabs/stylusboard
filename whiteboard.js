@@ -265,7 +265,7 @@ var swbserver = net.createServer(function (stream)
         // get list of current SWB users
         var repo = args["document"];
         if(whiteboards[repo]) {
-          stream.write(whiteboards[repo].clients.join(","));
+          stream.write(whiteboards[repo].clients.map(c=>c.name).join(","));
         }
         else {
           stream.write("-");
