@@ -1,11 +1,10 @@
-var sqlite3 = require('sqlite3');  //.verbose() - for enabling full stack traces on error
-var util = require('./util');
+var sqlite3    = require('sqlite3');  //.verbose() - for enabling full stack traces on error
+var util       = require('./util');
+var md5        = util.md5;
 
-var md5 = util.md5;
-
-exports.openDB = function(path, callback)
-{
+exports.openDB = function(path, callback) {
   var db = new sqlite3.Database(path, callback);
+  
   db.exec(
    "CREATE TABLE IF NOT EXISTS users( \
       id INTEGER PRIMARY KEY, \
@@ -26,36 +25,37 @@ exports.openDB = function(path, callback)
 
 // password handling
 
-var randSalt = function(len)
-{
-  var set = '0123456789abcdefghijklmnopqurstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ';
+var randSalt = function(len) {
+  var set  = '0123456789abcdefghijklmnopqurstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ';
   var salt = '';
-  for (var i = 0; i < len; i++) {
+  
+  for(var i = 0; i < len; i++) {
     var p = Math.floor(Math.random() * set.length);
     salt += set[p];
   }
+  
   return salt;
 }
 
-exports.saltAndHash = function(pass)
-{
+exports.saltAndHash = function(pass) {
   // this fixed salt must match value used in app
   var salt = "styluslabs"; // randSalt(10);
+  
   return md5(salt + pass);  //salt + md5(salt + pass);
 }
 
-exports.validatePassword = function(candidatePass, hashedPass)
-{
+exports.validatePassword = function(candidatePass, hashedPass) {
   //var salt = hashedPass.substr(0, 10);
   //var candidateHash = salt + md5(salt + candidatePass);
-  var salt = "styluslabs";
+  var salt          = "styluslabs";
   var candidateHash = md5(salt + candidatePass);
+  
   return hashedPass === candidateHash;
 }
 
 // app sends md5(md5(salt + pass) + challenge)
-exports.validateAppLogin = function(candidateHash, challenge, hashedPass)
-{
-  var validHash = md5(hashedPass + challenge)
+exports.validateAppLogin = function(candidateHash, challenge, hashedPass) {
+  var validHash          = md5(hashedPass + challenge);
+  
   return candidateHash === validHash;
 }

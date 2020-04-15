@@ -4,19 +4,18 @@
 
 // example: node whiteboard.js --db=/home/mwhite/cloud/stylusdata/cloudwrite.sqlite --log-level=debug --log-path="/var/log/styluslabs"
 
-var net = require("net");
-var http = require("http");
-var url = require("url");
+var net    = require("net");
+var http   = require("http");
+var url    = require("url");
 var moment = require('moment');
 
 var logger = require('./logger');
-
-var util = require('./util');
-var md5 = util.md5;
+var util   = require('./util');
+var md5    = util.md5;
 var rndstr = util.rndstr;
 
 // handle command line args - don't remove leading items since the number can vary based on how we're started
-var pargs = require('minimist')(process.argv);  //.slice(2));
+var pargs  = require('minimist')(process.argv);  //.slice(2));
 
 // handle optional JSON config file (specified as command line arg)
 /* {
@@ -28,28 +27,28 @@ var pargs = require('minimist')(process.argv);  //.slice(2));
 // note that command line args override config-file
 if(pargs["config-file"]) {
   var fs = require('fs');
-  pargs = util.mergeHash(JSON.parse(fs.readFileSync(pargs["config-file"])), pargs);
+  pargs  = util.mergeHash(JSON.parse(fs.readFileSync(pargs["config-file"])), pargs);
 }
 
 // DB setup
 var db = false;
 if(pargs["db"]) {
   var wbDB = require('./whiteboardDB');
-  db = wbDB.openDB(pargs["db"], function(err) {
+  db       = wbDB.openDB(pargs["db"], function(err) {
     if(err) {
       console.log("Error opening database " + pargs["db"] + ": ", err);
       process.exit(-102);
-    }
-    else {
+    } else {
       db.get("SELECT COUNT(1) AS nusers FROM users;", function(err, row) {
-        if(row)
+        if(row) {
           console.log("Database loaded with " + row.nusers + " users.");
+        }
       });
     }
   });
-}
-else
+} else {
   console.log("No database specified: running in anonymous mode.");
+}
 
 // Use HTTP API on separate port for everything except actual SWB
 // - for now, let's go with a default of short random string id:
@@ -64,20 +63,18 @@ else
 //  - option to restrict access to specified list of users
 //  - full URL as session ID for easy web access to sessions or site installs of server
 
-function Client(stream)
-{
-  this.name = null;
-  this.stream = stream;
-  this.remote = stream.remoteAddress + ":" + stream.remotePort;
-  this.cmdstr = "";
-  this.tempdata = "";
+function Client(stream) {
+  this.name          = null;
+  this.stream        = stream;
+  this.remote        = stream.remoteAddress + ":" + stream.remotePort;
+  this.cmdstr        = "";
+  this.tempdata      = "";
   this.expectdatalen = 0;
 }
 
-function Whiteboard(repo, attribs, token)
-{
-  this.repo = repo;
-  this.token = token;
+function Whiteboard(repo, attribs, token) {
+  this.repo    = repo;
+  this.token   = token;
   this.attribs = attribs;
   this.clients = [];
   this.history = "";
@@ -87,9 +84,8 @@ var whiteboards = {};
 
 // HTTP API server
 
-function Session(user, token)
-{
-  this.user = user;
+function Session(user, token) {
+  this.user  = user;
   this.token = token;
   this.ctime = Date.now();
 }
@@ -102,23 +98,21 @@ apilog.setLogLevel(pargs["log-level"] || process.env.STYLUS_LOG_LEVEL || 'info')
 pargs["log-path"] && apilog.setLogFile(pargs["log-path"] + "/apiserver.log");
 
 
-var apiserver = http.createServer(function (request, response)
-{
-  var parsed = url.parse(request.url, true);  // parseQueryString = true
-  var path = parsed.pathname;
-  var args = parsed.query;
+var apiserver = http.createServer(function(request, response) {
+  var parsed  = url.parse(request.url, true);  // parseQueryString = true
+  var path    = parsed.pathname;
+  var args    = parsed.query;
   // extract cookies
   var cookies = {};
   request.headers['cookie'] && request.headers['cookie'].split(';').forEach(function(cookie) {
-    var parts = cookie.split('=');
+    var parts                = cookie.split('=');
     cookies[parts[0].trim()] = (parts[1] || "").trim();
   });
   // logging
-  response.addListener('finish', function () {
-    apilog.info(request.socket.remoteAddress + ' - [' + moment().utc().format('DD MMMM YYYY HH:mm:ss') + ' GMT] "'
-        + request.method + ' ' + request.url + '" ' + response.statusCode + ' - ' + request.headers['user-agent'] + '"');
+  response.addListener('finish', function() {
+    apilog.info(request.socket.remoteAddress + ' - [' + moment().utc().format('DD MMMM YYYY HH:mm:ss') + ' GMT] "' + request.method + ' ' + request.url + '" ' + response.statusCode + ' - ' + request.headers['user-agent'] + '"');
   });
-
+  
   // debug page
   if(path == "/v1/debug" && pargs["enable-test"]) { //&& args["secret"] == "123456") {
     var replacer = function (key, value) {
@@ -129,31 +123,33 @@ var apiserver = http.createServer(function (request, response)
       else
         return value;
     }
+    
     response.writeHead(200);
-    response.end("whiteboards = " + JSON.stringify(whiteboards, replacer, 2)
-        + "\n\nsessions = " + JSON.stringify(sessions, null, 2));
+    response.end("whiteboards = " + JSON.stringify(whiteboards, replacer, 2) + "\n\nsessions = " + JSON.stringify(sessions, null, 2));
   }
-
+  
   // new users are added directly to database by web server
   if(path == "/v1/auth") {
     var acceptauth = function() {
-      var token = rndstr();
+      var token       = rndstr();
       sessions[token] = new Session(args["user"], token);
+      
       response.writeHead(200, {
         'Set-Cookie': 'session=' + token,
         'Content-Type': 'text/plain'
       });
       response.end();
     }
-
+    
     if(!db) {
       // if no DB, accept all connections
       acceptauth();
       return;
     }
+    
     // lookup user in DB
     db.get("SELECT password FROM users WHERE username = ?", args["user"], function(err, row) {
-      if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"],  row.password)) {
+      if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"], row.password)) {
         // TODO: actually verify that timestamp is within acceptable range
         // ... rather, the proper approach would be for the client to request a token and use that instead
         //  of timestamp to generate signature
@@ -167,6 +163,7 @@ var apiserver = http.createServer(function (request, response)
     });
     return;
   }
+  
   // verify session cookie for all other paths
   var session = sessions[cookies["session"]];
   if(!session) {
@@ -191,12 +188,12 @@ var apiserver = http.createServer(function (request, response)
     if(!whiteboards[repo]) {
       whiteboards[repo] = new Whiteboard(repo, Object.entries(args).map(e=>e[0]+"='"+e[1]+"'").join(" "), rndstr());
     }
-    var wb = whiteboards[repo];
+    var wb    = whiteboards[repo];
     var token = md5(session.user + wb.token);
+    
     response.writeHead(200);
     response.end("<swb " + wb.attribs + " user='" + session.user + "' token='" + token + "'/>");
-  }
-  else {
+  } else {
     response.writeHead(404);
     response.end();
   }
@@ -215,18 +212,18 @@ swblog.setLogLevel(pargs["log-level"] || process.env.STYLUS_LOG_LEVEL || 'info')
 //process.env.STYLUS_LOG_PATH && swblog.setLogFile(process.env.STYLUS_LOG_PATH + "/swbserver.log");
 pargs["log-path"] && swblog.setLogFile(pargs["log-path"] + "/swbserver.log");
 
-var swbserver = net.createServer(function (stream)
-{
+var swbserver = net.createServer(function(stream) {
   var client = new Client(stream);
+  
   stream.setTimeout(0);
   stream.setEncoding("binary");
   swblog.info(client.remote + " connected");
-
-  stream.on("data", function (data)
-  {
+  
+  stream.on("data", function(data) {
     // don't print everything unless explicitly requested
     if(pargs["dump"])
       swblog.debug("SWB server rcvd from " + client.remote + " data:", data);
+    
     while(data.length > 0) {
       if(client.expectdatalen > 0) {
         client.tempdata += data.substr(0, client.expectdatalen);
@@ -234,64 +231,65 @@ var swbserver = net.createServer(function (stream)
           client.expectdatalen -= data.length;
           return;
         }
-        swblog.debug("SWB server rcvd " + client.tempdata.length + " bytes of data from " + client.remote);
-        data = data.substr(client.expectdatalen);
+        data                 = data.substr(client.expectdatalen);
         client.expectdatalen = 0;
-        var wb = client.whiteboard;
-        wb.history += client.tempdata;
+        var wb               = client.whiteboard;
+        wb.history          += client.tempdata;
+        
         wb.clients.forEach(function(c) {
           // echo to all clients, including sender
           c.stream.write(client.tempdata, "binary");
         });
+        
         client.tempdata = "";
         // fall through to handle rest of data ... after checking length again
         continue;
       }
-
+      
       var delimidx = data.indexOf('\n');
       if(delimidx < 0) {
         client.cmdstr += data;
         return;
       }
       client.cmdstr += data.substr(0, delimidx);
-      data = data.substr(delimidx + 1);
-
+      data           = data.substr(delimidx + 1);
+      
       swblog.debug(client.remote + " sent command:", client.cmdstr);
-      var parsed = url.parse(client.cmdstr, true);  // parseQueryString = true
+      
+      var parsed  = url.parse(client.cmdstr, true);  // parseQueryString = true
       var command = parsed.pathname;
-      var args = parsed.query;
+      var args    = parsed.query;
       if(command == "/info") {
         // /info?document=<docname>
         // get list of current SWB users
         var repo = args["document"];
         if(whiteboards[repo]) {
           stream.write(whiteboards[repo].clients.map(c=>c.name).join(","));
-        }
-        else {
+        } else {
           stream.write("-");
         }
-      }
-      else if(command == "/start") {
+      } else if(command == "/start") {
         // arguments: version (protocal version) - ignored for now;, user, document, (history) offset (optional),
         //  token = MD5(user .. whiteboard.token)
         // history offset is 0 on initial connection; can be >0 when reconnecting
         var repo = args["document"];
-        var wb = whiteboards[repo];
+        var wb   = whiteboards[repo];
+        
         if(args["token"] == 'SCRIBBLE_SYNC_TEST' && pargs["enable-test"]) {
           swblog.info(client.remote + ": connecting to test whiteboard " + repo + " as " + args["user"]);
           if(!wb) {
             wb = new Whiteboard(repo);
             whiteboards[repo] = wb;
           }
-        }
-        else if(!wb || args["token"] != md5(args["user"] + wb.token)) {
+        } else if(!wb || args["token"] != md5(args["user"] + wb.token)) {
           swblog.warn(client.remote + ": whiteboard not found or invalid token");
           stream.write("<undo><accessdenied message='Whiteboard not found. Please try again.'/></undo>\n");
           clientdisconn();
           return;
         }
+        
         client.whiteboard = wb;
-        client.name = args["user"];
+        client.name       = args["user"];
         // send history
         if(wb.history.length > 0) {
           var histoffset = parseInt(args["offset"]);
@@ -300,8 +298,9 @@ var swbserver = net.createServer(function (stream)
           else
             stream.write(wb.history, "binary");
         }
+        
         wb.clients.push(client);
-
+        
         // if user was already connected as a different client, remove old client ... we've waited until new
         //  client has been added to wb.clients so disconn() won't delete the SWB if only one user.  Also
         //  have to wait until history is sent!
@@ -313,42 +312,40 @@ var swbserver = net.createServer(function (stream)
             disconn(c);
           }
         });
-
+        
         // client can use uuid to distinguish this connect message from previous ones when reconnecting
-        var msg = "<undo><connect name='" + client.name + "' uuid='" + args["uuid"] + "'/></undo>\n";
+        var msg     = "<undo><connect name='" + client.name + "' uuid='" + args["uuid"] + "'/></undo>\n";
         wb.history += msg;
         wb.clients.forEach(function(c) {
           c.stream.write(msg, "binary");
         });
-      }
-      else if(command == "/data") {
+      } else if(command == "/data") {
         client.expectdatalen = parseInt(args["length"]);
-      }
-      else if(command == "/end") {
+      } else if(command == "/end") {
         clientdisconn();
         return;
-      }
-      else {
+      } else {
         swblog.warn(client.remote + " sent invalid command:", client.cmdstr);
         //clientdisconn();
         //return;
       }
+      
       client.cmdstr = "";
     }
   });
-
-  function disconn(client)
-  {
+  
+  function disconn(client) {
     swblog.info(client.remote + " disconnected");
+    
     var wb = client.whiteboard;
+    
     if(wb && wb.clients.remove(client)) {
       if(wb.clients.length == 0) {
         swblog.info("deleting whiteboard:", wb.repo);
         // delete whiteboard after last user disconnects
         delete whiteboards[wb.repo];
-      }
-      else {
-        var msg = "<undo><disconnect name='" + client.name + "'/></undo>\n";
+      } else {
+        var msg     = "<undo><disconnect name='" + client.name + "'/></undo>\n";
         wb.history += msg;
         wb.clients.forEach(function(c) {
           c.stream.write(msg, "binary");
@@ -357,14 +354,13 @@ var swbserver = net.createServer(function (stream)
     }
     //client.stream.removeAllListeners();
     client.stream.end();
-		client.cmdstr = "";
+    client.cmdstr = "";
   }
-
+  
   function clientdisconn() { disconn(client); }
-
-  stream.on("end", function () { swblog.warn("disconnect due to stream end"); disconn(client); });
-  stream.on("error", function (err) { swblog.warn("disconnect due to stream error:", err); disconn(client); });
-
+  
+  stream.on("end",   function()    { swblog.warn("disconnect due to stream end"        ); disconn(client); });
+  stream.on("error", function(err) { swblog.warn("disconnect due to stream error:", err); disconn(client); });
 });
 
 swbserver.listen(7001);
