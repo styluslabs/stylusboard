@@ -285,7 +285,7 @@ var swbserver = net.createServer(function(stream) {
 				} else if(!wb || args["token"] != md5(args["user"] + wb.token)) {
 					swblog.warn(client.remote + ": whiteboard not found or invalid token");
 					stream.write("<undo><accessdenied message='Whiteboard not found. Please try again.'/></undo>\n");
-					clientdisconn();
+					disconn(client);
 					return;
 				}
 				
@@ -323,11 +323,11 @@ var swbserver = net.createServer(function(stream) {
 			} else if(command == "/data") {
 				client.expectdatalen = parseInt(args["length"]);
 			} else if(command == "/end") {
-				clientdisconn();
+				disconn(client);
 				return;
 			} else {
 				swblog.warn(client.remote + " sent invalid command:", client.cmdstr);
-				//clientdisconn();
+				//disconn(client);
 				//return;
 			}
 			
@@ -357,8 +357,6 @@ var swbserver = net.createServer(function(stream) {
 		client.stream.end();
 		client.cmdstr = "";
 	}
-	
-	function clientdisconn() { disconn(client); }
 	
 	stream.on("end",   function()    { swblog.warn("disconnect due to stream end"        ); disconn(client); });
 	stream.on("error", function(err) { swblog.warn("disconnect due to stream error:", err); disconn(client); });
