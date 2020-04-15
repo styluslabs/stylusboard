@@ -27,7 +27,7 @@ var pargs  = require('minimist')(process.argv);  //.slice(2));
 // note that command line args override config-file
 if(pargs["config-file"]) {
 	var fs = require('fs');
-	pargs  = util.mergeHash(JSON.parse(fs.readFileSync(pargs["config-file"])), pargs);
+	pargs  = Object.assign(JSON.parse(fs.readFileSync(pargs["config-file"])), pargs);
 }
 
 // DB setup
