@@ -27,17 +27,10 @@ function Logger() {
 	var logimpl = function(level, args) {
 		var levels = ['error', 'warn', 'info', 'debug'];
 		if(levels.indexOf(level) > levels.indexOf(self.logLevel)) {
-			var msgs    = [];
-			for(var ii = 0; ii < args.length; ii++) {
-				msgs.push((typeof args[ii] !== 'string') ? JSON.stringify(args[ii]) : args[ii]);
-			}
+			var message_parts = args.map(a => (typeof args[ii] !== 'string') ? JSON.stringify(args[ii]) : args[ii]);
+			var message       = level + ': ' + message_parts.join(" ");
 			
-			var message = level + ': ' + msgs.join(" ");
-			// remove trailing newline if present
-			if(message.substr(-1) === '\n')
-				message = message.slice(0, -1);
-			
-			self.logStream.write(message + '\n');
+			self.logStream.write(message.trimEnd() + '\n');
 			// always print errors to console
 			if(level === 'error' && self.logStream !== process.stdout)
 				console.log(message);
