@@ -26,8 +26,8 @@ function Logger() {
 	
 	var logimpl = function(level, args) {
 		var levels = ['error', 'warn', 'info', 'debug'];
-		if(levels.indexOf(level) > levels.indexOf(self.logLevel)) {
-			var message_parts = args.map(a => (typeof args[ii] !== 'string') ? JSON.stringify(args[ii]) : args[ii]);
+		if(levels.indexOf(level) <= levels.indexOf(self.logLevel)) {
+			var message_parts = Object.values(args).map(a => (typeof a !== 'string') ? JSON.stringify(a) : a);
 			var message       = level + ': ' + message_parts.join(" ");
 			
 			self.logStream.write(message.trimEnd() + '\n');
