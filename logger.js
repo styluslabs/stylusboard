@@ -26,23 +26,22 @@ function Logger() {
 	
 	var logimpl = function(level, args) {
 		var levels = ['error', 'warn', 'info', 'debug'];
-		if(levels.indexOf(level) > levels.indexOf(self.logLevel))
-			return;
-		
-		var msgs   = [];
-		for(var ii = 0; ii < args.length; ii++) {
-			msgs.push((typeof args[ii] !== 'string') ? JSON.stringify(args[ii]) : args[ii]);
+		if(levels.indexOf(level) > levels.indexOf(self.logLevel)) {
+			var msgs    = [];
+			for(var ii = 0; ii < args.length; ii++) {
+				msgs.push((typeof args[ii] !== 'string') ? JSON.stringify(args[ii]) : args[ii]);
+			}
+			
+			var message = level + ': ' + msgs.join(" ");
+			// remove trailing newline if present
+			if(message.substr(-1) === '\n')
+				message = message.slice(0, -1);
+			
+			self.logStream.write(message + '\n');
+			// always print errors to console
+			if(level === 'error' && self.logStream !== process.stdout)
+				console.log(message);
 		}
-		
-		var message = level + ': ' + msgs.join(" ");
-		// remove trailing newline if present
-		if(message.substr(-1) === '\n')
-			message = message.slice(0, -1);
-		
-		self.logStream.write(message + '\n');
-		// always print errors to console
-		if(level === 'error' && self.logStream !== process.stdout)
-			console.log(message);
 	}
 	
 	self.log   = function(level) { logimpl(level,   Array.prototype.slice.call(arguments, 1)); }
@@ -55,10 +54,12 @@ function Logger() {
 
 // look up logger by name or create a new one
 module.exports = function(name) {
-	if(name && loggers[name])
+	if(name && loggers[name]) {
 		return loggers[name];
-	var logger = Logger();
-	if(name)
-		loggers[name] = logger;
-	return logger;
+	} else {
+		var logger = Logger();
+		
+		if(name) loggers[name] = logger;
+		return logger;
+	}
 }
