@@ -282,7 +282,7 @@ var swbserver = net.createServer(function(stream) {
 				} else if(!wb || args["token"] != md5(args["user"] + wb.token)) {
 					swblog.warn(client.remote + ": whiteboard not found or invalid token");
 					stream.write("<undo><accessdenied message='Whiteboard not found. Please try again.'/></undo>\n");
-					disconn(client);
+					disconnect_client(client);
 					return;
 				}
 				
@@ -300,14 +300,14 @@ var swbserver = net.createServer(function(stream) {
 				wb.clients.push(client);
 				
 				// if user was already connected as a different client, remove old client ... we've waited until new
-				//  client has been added to wb.clients so disconn() won't delete the SWB if only one user.  Also
+				//  client has been added to wb.clients so disconnect_client() won't delete the SWB if only one user.  Also
 				//  have to wait until history is sent!
 				wb.clients.forEach(function(c) {
 					// use full disconnect procedure to send "disconnect" signal since we'll send "connect" signal below
 					if(c.name == args["user"] && c != client) {
 						swblog.info("disconnecting " + c.remote + " due to connection of " + client.remote + " for user: " + c.name);
 						c.stream.write("<undo><accessdenied message='User logged in from another location.'/></undo>\n");
-						disconn(c);
+						disconnect_client(c);
 					}
 				});
 				
@@ -320,11 +320,11 @@ var swbserver = net.createServer(function(stream) {
 			} else if(command == "/data") {
 				client.expectdatalen = parseInt(args["length"]);
 			} else if(command == "/end") {
-				disconn(client);
+				disconnect_client(client);
 				return;
 			} else {
 				swblog.warn(client.remote + " sent invalid command:", client.cmdstr);
-				//disconn(client);
+				//disconnect_client(client);
 				//return;
 			}
 			
@@ -332,7 +332,7 @@ var swbserver = net.createServer(function(stream) {
 		}
 	});
 	
-	function disconn(client) {
+	function disconnect_client(client) {
 		swblog.info(client.remote + " disconnected");
 		
 		var wb = client.whiteboard;
@@ -355,8 +355,8 @@ var swbserver = net.createServer(function(stream) {
 		client.cmdstr = "";
 	}
 	
-	stream.on("end",   function()    { swblog.warn("disconnect due to stream end"        ); disconn(client); });
-	stream.on("error", function(err) { swblog.warn("disconnect due to stream error:", err); disconn(client); });
+	stream.on("end",   function()    { swblog.warn("disconnect due to stream end"        ); disconnect_client(client); });
+	stream.on("error", function(err) { swblog.warn("disconnect due to stream error:", err); disconnect_client(client); });
 });
 
 swbserver.listen(7001);
