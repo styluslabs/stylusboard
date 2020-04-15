@@ -1,0 +1,116 @@
+---
+- type:                                http
+  port:                                7000
+  paths:
+    /v1/debug:
+      
+    /v1/auth:
+      query:
+        - name:                        user
+          type:                        string
+        - name:                        password
+          type:                        string
+          description:                 Only needed if the server is running in non-anonymous mode.
+        - name:                        timestamp
+          type:                        integer
+          description:                 Timestamp in unix time.
+        - name:                        signature
+          type:                        string
+      response:
+        200:
+          header:
+            Set-Cookie:                session={token}
+        401:
+          description:                 Invalid username/password.
+    /v1/createswb:
+      query:
+        - name:                        name
+          type:                        string
+          description:                 The name of the new whiteboard.
+        -                              additional attributes for the whiteboard
+      header:
+        Cookie:                        session={token}
+      response:
+        403:
+          description:                 Session token invalid.
+        408:
+          description:                 Session token expired.
+        404:
+          description:                 No name query given or whiteboard with the same name already exists.
+        200:
+          description:                 Whiteboard with name created.
+          body:                        |
+                                       Returns an XML tag "swb" with the user used for authentication, a unique token (md5 hash of username + whiteboard-token) and additional whiteboard attributes.
+                                       
+                                       <swb whiteboard_attribute_1='...' ... user='{user}' token='{token}'/>
+    /v1/openswb:
+      query:
+        - name:                        name
+          type:                        string
+          description:                 Name of the whiteboard which should be opened.
+      header:
+        Cookie:                        session={token}
+      response:
+        403:
+          description:                 Session token invalid.
+        408:
+          description:                 Session token expired.
+        404:
+          description:                 No name query given or whiteboard with the same name does not exist.
+        200:
+          description:                 Whiteboard with name opened.
+          body:                        |
+                                       Returns an XML tag "swb" with the user used for authentication, a unique token (md5 hash of username + whiteboard-token) and additional whiteboard attributes.
+                                       
+                                       <swb whiteboard_attribute_1='...' ... user='{user}' token='{token}'/>
+- type:                                tcp
+  port:                                7001
+  description:                         |
+                                       This server provides methods to connect and send data to a whiteboard and gather information of whiteboards.
+                                       It relays whiteboard data from a client connected to a whiteboard to all other clients connected to the same whiteboard.
+  commands:
+    /info:
+      query:
+        - name:                        document
+          type:                        string
+          description:                 Name of the whiteboard of which the connected users will be returned.
+      response:                        |
+                                       '-', when whiteboard named {document} does not exist.
+                                       Otherwise, user names separated by ','.
+    /data:
+      query:
+        - name:                        length
+          type:                        integer
+      description:                     Tells the server that the next {length} bytes should be written to the whiteboard.
+    /start:
+      query:
+        - name:                        document
+          type:                        string
+          description:                 Name of the whiteboard.
+        - name:                        token
+          type:                        string
+          description:                 The token returned by /v1/createswb or /v1/openswb.
+        - name:                        user
+          type:                        string
+          description:                 The user returned by /v1/createswb or /v1/openswb.
+        - name:                        offset
+          type:                        integer
+          description:                 Whiteboard history offset.
+        - name:                        uuid
+          type:                        string
+          description:                 Can be used to distinguish a connect message from previous ones.
+      response:                        |
+                                       If whiteboard not found or token invalid, the following response is followed by an internal disconnect.
+                                       <undo><accessdenied message='Whiteboard not found. Please try again.'/></undo>\n
+                                       
+                                       If the current user is already connected through another device, the other device will be logged out and sent the following.
+                                       <undo><accessdenied message='User logged in from another location.'/></undo>\n
+                                       
+                                       When successful, every connected client will receive the following message.
+                                       <undo><connect name='{user}' uuid='{uuid}'/></undo>\n
+                                       
+                                       
+    /end:
+      description:                     |
+                                       Disconnects the client from a connected whiteboard.
+                                       Deletes the whiteboard, if this was the only connected client.
