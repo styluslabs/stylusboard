@@ -357,6 +357,7 @@ var swbserver = net.createServer(function (stream)
     }
     //client.stream.removeAllListeners();
     client.stream.end();
+		client.cmdstr = "";
   }
 
   function clientdisconn() { disconn(client); }
