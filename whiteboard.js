@@ -36,12 +36,12 @@ if(pargs["db"]) {
 	var wbDB = require('./whiteboardDB');
 	db       = wbDB.openDB(pargs["db"], function(err) {
 		if(err) {
-			console.log("Error opening database " + pargs["db"] + ": ", err);
+			console.log(`Error opening database ${pargs["db"]}: ${err}`);
 			process.exit(-102);
 		} else {
 			db.get("SELECT COUNT(1) AS nusers FROM users;", function(err, row) {
 				if(row) {
-					console.log("Database loaded with " + row.nusers + " users.");
+					console.log(`Database loaded with ${row.nusers} users.`);
 				}
 			});
 		}
@@ -66,7 +66,7 @@ if(pargs["db"]) {
 function Client(stream) {
 	this.name          = null;
 	this.stream        = stream;
-	this.remote        = stream.remoteAddress + ":" + stream.remotePort;
+	this.remote        = `${stream.remoteAddress}:${stream.remotePort}`;
 	this.cmdstr        = "";
 	this.tempdata      = "";
 	this.expectdatalen = 0;
@@ -95,7 +95,7 @@ var sessions = {};
 var apilog = logger('apilog');
 apilog.setLogLevel(pargs["log-level"] || process.env.STYLUS_LOG_LEVEL || 'info');
 //process.env.STYLUS_LOG_PATH && apilog.setLogFile(process.env.STYLUS_LOG_PATH + "/apiserver.log");
-pargs["log-path"] && apilog.setLogFile(pargs["log-path"] + "/apiserver.log");
+pargs["log-path"] && apilog.setLogFile(`${pargs["log-path"]}/apiserver.log`);
 
 
 var apiserver = http.createServer(function(request, response) {
@@ -110,14 +110,14 @@ var apiserver = http.createServer(function(request, response) {
 	});
 	// logging
 	response.addListener('finish', function() {
-		apilog.info(request.socket.remoteAddress + ' - [' + moment().utc().format('DD MMMM YYYY HH:mm:ss') + ' GMT] "' + request.method + ' ' + request.url + '" ' + response.statusCode + ' - ' + request.headers['user-agent'] + '"');
+		apilog.info(`${request.socket.remoteAddress} - [${moment().utc().format('DD MMMM YYYY HH:mm:ss')} GMT] "${request.method} ${request.url}" ${response.statusCode} - ${request.headers['user-agent']}"`);
 	});
 	
 	// debug page
 	if(path == "/v1/debug" && pargs["enable-test"]) { //&& args["secret"] == "123456") {
 		var replacer = function (key, value) {
 			if(key == "history" || key == "tempdata")
-				return "[ " + value.length + " bytes ]";
+				return `[ ${value.length} bytes ]`;
 			else if(key == "whiteboard" || key == "stream")
 				return "[ Circular ]";
 			else
@@ -125,7 +125,7 @@ var apiserver = http.createServer(function(request, response) {
 		}
 		
 		response.writeHead(200);
-		response.end("whiteboards = " + JSON.stringify(whiteboards, replacer, 2) + "\n\nsessions = " + JSON.stringify(sessions, null, 2));
+		response.end(`whiteboards = ${JSON.stringify(whiteboards, replacer, 2)}\n\nsessions = ${JSON.stringify(sessions, null, 2)}`);
 	}
 	
 	// new users are added directly to database by web server
@@ -135,7 +135,7 @@ var apiserver = http.createServer(function(request, response) {
 			sessions[token] = new Session(args["user"], token);
 			
 			response.writeHead(200, {
-				'Set-Cookie': 'session=' + token,
+				'Set-Cookie':   `session=${token}`,
 				'Content-Type': 'text/plain'
 			});
 			response.end();
@@ -191,7 +191,7 @@ var apiserver = http.createServer(function(request, response) {
 		var token = md5(session.user + wb.token);
 		
 		response.writeHead(200);
-		response.end("<swb " + wb.attribs + " user='" + session.user + "' token='" + token + "'/>");
+		response.end(`<swb ${wb.attribs} user='${session.user}' token='${token}'/>`);
 	} else {
 		response.writeHead(404);
 		response.end();
@@ -209,19 +209,19 @@ apiserver.listen(7000);
 var swblog = logger('swblog');
 swblog.setLogLevel(pargs["log-level"] || process.env.STYLUS_LOG_LEVEL || 'info');
 //process.env.STYLUS_LOG_PATH && swblog.setLogFile(process.env.STYLUS_LOG_PATH + "/swbserver.log");
-pargs["log-path"] && swblog.setLogFile(pargs["log-path"] + "/swbserver.log");
+pargs["log-path"] && swblog.setLogFile(`${pargs["log-path"]}/swbserver.log`);
 
 var swbserver = net.createServer(function(stream) {
 	var client = new Client(stream);
 	
 	stream.setTimeout(0);
-	stream.setEncoding("binary");
-	swblog.info(client.remote + " connected");
+	stream.setEncoding("utf8");
+	swblog.info(`${client.remote} connected`);
 	
 	stream.on("data", function(data) {
 		// don't print everything unless explicitly requested
 		if(pargs["dump"])
-			swblog.debug("SWB server rcvd from " + client.remote + " data:", data);
+			swblog.debug(`SWB server rcvd from ${client.remote} data:`, data);
 		
 		while(data.length > 0) {
 			if(client.expectdatalen > 0) {
@@ -230,7 +230,7 @@ var swbserver = net.createServer(function(stream) {
 				if(client.expectdatalen > data.length) {
 					client.expectdatalen -= data.length;
 				} else {
-					swblog.debug("SWB server rcvd " + client.tempdata.length + " bytes of data from " + client.remote);
+					swblog.debug(`SWB server rcvd ${client.tempdata.length} bytes of data from ${client.remote}`);
 					data                  = data.substr(client.expectdatalen);
 					client.expectdatalen  = 0;
 					var wb                = client.whiteboard;
@@ -238,7 +238,7 @@ var swbserver = net.createServer(function(stream) {
 					
 					wb.clients.forEach(function(c) {
 						// echo to all clients, including sender
-						c.stream.write(client.tempdata);
+						c.stream.write(client.tempdata, "binary");
 					});
 					
 					client.tempdata = "";
@@ -255,7 +255,7 @@ var swbserver = net.createServer(function(stream) {
 			client.cmdstr += data.substr(0, delimidx);
 			data           = data.substr(delimidx + 1);
 			
-			swblog.debug(client.remote + " sent command:", client.cmdstr);
+			swblog.debug(`${client.remote} sent command:`, client.cmdstr);
 			
 			var parsed  = url.parse(client.cmdstr, true);  // parseQueryString = true
 			var command = parsed.pathname;
@@ -277,13 +277,13 @@ var swbserver = net.createServer(function(stream) {
 				var wb   = whiteboards[repo];
 				
 				if(args["token"] == 'SCRIBBLE_SYNC_TEST' && pargs["enable-test"]) {
-					swblog.info(client.remote + ": connecting to test whiteboard " + repo + " as " + args["user"]);
+					swblog.info(`${client.remote}: connecting to test whiteboard ${repo} as ${args["user"]}`);
 					if(!wb) {
 						wb = new Whiteboard(repo);
 						whiteboards[repo] = wb;
 					}
 				} else if(!wb || args["token"] != md5(args["user"] + wb.token)) {
-					swblog.warn(client.remote + ": whiteboard not found or invalid token");
+					swblog.warn(`${client.remote}: whiteboard not found or invalid token`);
 					stream.write("<undo><accessdenied message='Whiteboard not found. Please try again.'/></undo>\n");
 					disconnectClient(client);
 					return;
@@ -308,14 +308,14 @@ var swbserver = net.createServer(function(stream) {
 				wb.clients.forEach(function(c) {
 					// use full disconnect procedure to send "disconnect" signal since we'll send "connect" signal below
 					if(c.name == args["user"] && c != client) {
-						swblog.info("disconnecting " + c.remote + " due to connection of " + client.remote + " for user: " + c.name);
+						swblog.info(`disconnecting ${c.remote} due to connection of ${client.remote} for user: ${c.name}`);
 						c.stream.write("<undo><accessdenied message='User logged in from another location.'/></undo>\n");
 						disconnectClient(c);
 					}
 				});
 				
 				// client can use uuid to distinguish this connect message from previous ones when reconnecting
-				var msg     = "<undo><connect name='" + client.name + "' uuid='" + args["uuid"] + "'/></undo>\n";
+				var msg     = `<undo><connect name='${client.name}' uuid='${args["uuid"]}'/></undo>\n`;
 				wb.history += msg;
 				wb.clients.forEach(function(c) {
 					c.stream.write(msg, "binary");
@@ -326,7 +326,7 @@ var swbserver = net.createServer(function(stream) {
 				disconnectClient(client);
 				return;
 			} else {
-				swblog.warn(client.remote + " sent invalid command:", client.cmdstr);
+				swblog.warn(`${client.remote} sent invalid command:`, client.cmdstr);
 				//disconnectClient(client);
 				//return;
 			}
@@ -336,7 +336,7 @@ var swbserver = net.createServer(function(stream) {
 	});
 	
 	function disconnectClient(client) {
-		swblog.info(client.remote + " disconnected");
+		swblog.info(`${client.remote} disconnected`);
 		
 		var wb = client.whiteboard;
 		
@@ -346,7 +346,7 @@ var swbserver = net.createServer(function(stream) {
 				// delete whiteboard after last user disconnects
 				delete whiteboards[wb.repo];
 			} else {
-				var msg     = "<undo><disconnect name='" + client.name + "'/></undo>\n";
+				var msg     = `<undo><disconnect name='${client.name}'/></undo>\n`;
 				wb.history += msg;
 				wb.clients.forEach(function(c) {
 					c.stream.write(msg, "binary");
