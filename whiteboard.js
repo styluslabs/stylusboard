@@ -144,23 +144,22 @@ var apiserver = http.createServer(function(request, response) {
 		if(!db) {
 			// if no DB, accept all connections
 			acceptauth();
-			return;
+		} else {
+			// lookup user in DB
+			db.get("SELECT password FROM users WHERE username = ?", args["user"], function(err, row) {
+				if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"], row.password)) {
+					// TODO: actually verify that timestamp is within acceptable range
+					// ... rather, the proper approach would be for the client to request a token and use that instead
+					//  of timestamp to generate signature
+					acceptauth();
+					return;
+				}
+				//console.log("Auth failed for: " + request.url);
+				// fall thru for all error cases
+				response.writeHead(401);
+				response.end("error: invalid username or password");
+			});
 		}
-		
-		// lookup user in DB
-		db.get("SELECT password FROM users WHERE username = ?", args["user"], function(err, row) {
-			if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"], row.password)) {
-				// TODO: actually verify that timestamp is within acceptable range
-				// ... rather, the proper approach would be for the client to request a token and use that instead
-				//  of timestamp to generate signature
-				acceptauth();
-				return;
-			}
-			//console.log("Auth failed for: " + request.url);
-			// fall thru for all error cases
-			response.writeHead(401);
-			response.end("error: invalid username or password");
-		});
 		return;
 	}
 	
@@ -225,23 +224,24 @@ var swbserver = net.createServer(function(stream) {
 		while(data.length > 0) {
 			if(client.expectdatalen > 0) {
 				client.tempdata += data.substr(0, client.expectdatalen);
+				
 				if(client.expectdatalen > data.length) {
 					client.expectdatalen -= data.length;
-					return;
+				} else {
+					data                  = data.substr(client.expectdatalen);
+					client.expectdatalen  = 0;
+					var wb                = client.whiteboard;
+					wb.history           += client.tempdata;
+					
+					wb.clients.forEach(function(c) {
+						// echo to all clients, including sender
+						c.stream.write(client.tempdata);
+					});
+					
+					client.tempdata = "";
+					// fall through to handle rest of data ... after checking length again
+					continue;
 				}
-				data                 = data.substr(client.expectdatalen);
-				client.expectdatalen = 0;
-				var wb               = client.whiteboard;
-				wb.history          += client.tempdata;
-				
-				wb.clients.forEach(function(c) {
-					// echo to all clients, including sender
-					c.stream.write(client.tempdata);
-				});
-				
-				client.tempdata = "";
-				// fall through to handle rest of data ... after checking length again
-				continue;
 			}
 			
 			var delimidx = data.indexOf('\n');
