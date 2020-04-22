@@ -225,12 +225,14 @@ var swbserver = net.createServer(function (stream)
 {
   var client = new Client(stream);
   stream.setTimeout(0);
-  stream.setEncoding("utf8");
+  stream.setEncoding("binary");
   swblog.info(client.remote + " connected");
 
   stream.on("data", function (data)
   {
-    swblog.debug("SWB server rcvd from " + client.remote + " data:", data);
+    // don't print everything unless explicitly requested
+    if(pargs["dump"])
+      swblog.debug("SWB server rcvd from " + client.remote + " data:", data);
     while(data.length > 0) {
       if(client.expectdatalen > 0) {
         client.tempdata += data.substr(0, client.expectdatalen);
@@ -238,13 +240,14 @@ var swbserver = net.createServer(function (stream)
           client.expectdatalen -= data.length;
           return;
         }
+        swblog.debug("SWB server rcvd " + client.tempdata.length + " bytes of data from " + client.remote);
         data = data.substr(client.expectdatalen);
         client.expectdatalen = 0;
         var wb = client.whiteboard;
         wb.history += client.tempdata;
         wb.clients.forEach(function(c) {
           // echo to all clients, including sender
-          c.stream.write(client.tempdata);
+          c.stream.write(client.tempdata, "binary");
         });
         client.tempdata = "";
         // fall through to handle rest of data ... after checking length again
@@ -299,9 +302,9 @@ var swbserver = net.createServer(function (stream)
         if(wb.history.length > 0) {
           var histoffset = parseInt(args["offset"]);
           if(histoffset > 0)
-            stream.write(wb.history.slice(histoffset));
+            stream.write(wb.history.slice(histoffset), "binary");
           else
-            stream.write(wb.history);
+            stream.write(wb.history, "binary");
         }
         wb.clients.push(client);
 
@@ -321,7 +324,7 @@ var swbserver = net.createServer(function (stream)
         var msg = "<undo><connect name='" + client.name + "' uuid='" + args["uuid"] + "'/></undo>\n";
         wb.history += msg;
         wb.clients.forEach(function(c) {
-          c.stream.write(msg);
+          c.stream.write(msg, "binary");
         });
       }
       else if(command == "/data") {
@@ -354,7 +357,7 @@ var swbserver = net.createServer(function (stream)
         var msg = "<undo><disconnect name='" + client.name + "'/></undo>\n";
         wb.history += msg;
         wb.clients.forEach(function(c) {
-          c.stream.write(msg);
+          c.stream.write(msg, "binary");
         });
       }
     }
