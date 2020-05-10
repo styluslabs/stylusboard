@@ -81,6 +81,7 @@ function Whiteboard(repo, attribs, token)
   this.attribs = attribs;
   this.clients = [];
   this.history = "";
+  this.destructor = null;
 }
 
 var whiteboards = {};
@@ -221,6 +222,9 @@ swblog.setLogLevel(pargs["log-level"] || process.env.STYLUS_LOG_LEVEL || 'info')
 //process.env.STYLUS_LOG_PATH && swblog.setLogFile(process.env.STYLUS_LOG_PATH + "/swbserver.log");
 pargs["log-path"] && swblog.setLogFile(pargs["log-path"] + "/swbserver.log");
 
+// seconds to ms
+var destroyDelay = pargs["del-delay"]*1000 || 0;
+
 var swbserver = net.createServer(function (stream)
 {
   var client = new Client(stream);
@@ -307,6 +311,10 @@ var swbserver = net.createServer(function (stream)
             stream.write(wb.history, "binary");
         }
         wb.clients.push(client);
+        if(wb.destructor) {
+          clearTimeout(wb.destructor);
+          wb.destructor = null;
+        }
 
         // if user was already connected as a different client, remove old client ... we've waited until new
         //  client has been added to wb.clients so disconn() won't delete the SWB if only one user.  Also
@@ -349,9 +357,11 @@ var swbserver = net.createServer(function (stream)
     var wb = client.whiteboard;
     if(wb && wb.clients.remove(client)) {
       if(wb.clients.length == 0) {
-        swblog.info("deleting whiteboard:", wb.repo);
-        // delete whiteboard after last user disconnects
-        delete whiteboards[wb.repo];
+        // delete whiteboard after specified delay after last user disconnects
+        wb.destructor = setTimeout(function () {
+          swblog.info("deleting whiteboard:", wb.repo);
+          delete whiteboards[wb.repo];
+        }, destroyDelay);
       }
       else {
         var msg = "<undo><disconnect name='" + client.name + "'/></undo>\n";
