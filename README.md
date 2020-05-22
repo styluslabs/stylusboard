@@ -1,7 +1,12 @@
 # Stylusboard #
 
 Shared whiteboard server for [Stylus Labs Write](http://www.styluslabs.com) - enables multiple users to collaborate in real time on a handwritten document.
-In Write, enable advanced preferences, then in the Advanced -> Whiteboard server field enter the host name or IP address of the machine running this server.
+To set your server as the default in Write, enable advanced preferences, then in the Advanced -> Whiteboard server field enter the host name or IP address of the machine running this server.
+
+To connect to a different server and/or with a different username than the default, use the following format for the whiteboard ID in the Open Whiteboard and Create Whiteboard dialogs:
+```
+[user[:password]@server/]whiteboard_id
+```
 
 Run `node.js whiteboard.js`.  Last tested with an ancient version of node.js (0.10.36)
 
