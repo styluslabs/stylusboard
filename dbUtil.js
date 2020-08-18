@@ -2,7 +2,27 @@ var wbDB = require('./whiteboardDB');
 var fs = require('fs');
 var pargs = require('minimist')(process.argv);
 
-if(pargs["db"] && !fs.existsSync(pargs["db"]))
+var printHelp = function()
+{
+  console.log("Stylus Labs whiteboard database utility");
+  console.log("Available commands:");
+  //console.log("  node dbTool.js --db <path to database file> createdb");
+  console.log("  adduser <username> <password> [[<email> <displayname>]] - add new user");
+  console.log("  updatepw <username> <newpassword> - change password for user");
+  console.log("  rmuser <username> - delete user");
+  console.log("  list - list all users");
+  console.log("Arguments:");
+  console.log("  --db <path to database file> (required)");
+  console.log("Example:");
+  console.log("  node dbUtil.js --db db1.sqlite adduser user1 passwd1");
+}
+
+if(!pargs["db"]) {
+  printHelp();
+  process.exit(-101);
+}
+
+if(!fs.existsSync(pargs["db"]))
   console.log("Database file " + pargs["db"] + " will be created.");
 
 var db = wbDB.openDB(pargs["db"], function(err) {
@@ -83,15 +103,5 @@ else if(cmd == "list") {
   });
 }
 else {
-  console.log("Stylus Labs whiteboard database utility");
-  console.log("Available commands:");
-  //console.log("  node dbTool.js --db <path to database file> createdb");
-  console.log("  adduser <username> <password> [[<email> <displayname>]] - add new user");
-  console.log("  updatepw <username> <newpassword> - change password for user");
-  console.log("  rmuser <username> - delete user");
-  console.log("  list - list all users");
-  console.log("Arguments:");
-  console.log("  --db <path to database file> (required)");
-  console.log("Example");
-  console.log("node dbUtil.js --db db1.sqlite adduser user1 passwd1");
+  printHelp();
 }

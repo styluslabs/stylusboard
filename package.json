@@ -1,16 +1,15 @@
 {
-  "name":"cloudwrite",
-  "version":"0.0.1",
-  "homepage":"http://bitbucket.com/pbsurf/CloudWrite",
-  "author":"Stylus Labs (http://styluslabs.com/)",
-  "main":"./whiteboard.js",
-
-  "dependencies":{
+  "name": "cloudwrite",
+  "version": "0.0.1",
+  "homepage": "http://bitbucket.com/pbsurf/CloudWrite",
+  "author": "Stylus Labs (http://styluslabs.com/)",
+  "main": "./whiteboard.js",
+  "dependencies": {
     "sqlite3": "*",
     "moment": "*",
     "minimist": "*"
   },
-  "engines":{
-    "node":">= 0.10.0"
+  "engines": {
+    "node": ">= 0.10.0"
   }
 }

@@ -154,7 +154,7 @@ var apiserver = http.createServer(function (request, response)
     }
     // lookup user in DB
     db.get("SELECT password FROM users WHERE username = ?", args["user"], function(err, row) {
-      if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"],  row.password)) {
+      if(row && wbDB.validateAppLogin(args["signature"], args["timestamp"], row.password)) {
         // TODO: actually verify that timestamp is within acceptable range
         // ... rather, the proper approach would be for the client to request a token and use that instead
         //  of timestamp to generate signature
@@ -192,7 +192,7 @@ var apiserver = http.createServer(function (request, response)
     if(!whiteboards[repo]) {
       var a = [];
       for(var k in args) {
-        if(args.hasOwnProperty(k)) {
+        if(!args.hasOwnProperty || args.hasOwnProperty(k)) {
           a.push(k + "='" + args[k] + "'");
         }
       }

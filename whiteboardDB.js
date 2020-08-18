@@ -28,7 +28,7 @@ exports.openDB = function(path, callback)
 
 var randSalt = function(len)
 {
-  var set = '0123456789abcdefghijklmnopqurstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ';
+  var set = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var salt = '';
   for (var i = 0; i < len; i++) {
     var p = Math.floor(Math.random() * set.length);
