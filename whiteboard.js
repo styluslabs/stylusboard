@@ -267,7 +267,12 @@ var swbserver = net.createServer(function (stream)
       data = data.substr(delimidx + 1);
 
       swblog.debug(client.remote + " sent command:", client.cmdstr);
-      var parsed = url.parse(client.cmdstr, true);  // parseQueryString = true
+      var parsed = {};
+      try {
+        if(client.cmdstr[0] == '/')
+          parsed = url.parse(client.cmdstr, true);  // parseQueryString = true
+      }
+      catch(ex) {}
       var command = parsed.pathname;
       var args = parsed.query;
       if(command == "/info") {
@@ -344,8 +349,8 @@ var swbserver = net.createServer(function (stream)
       }
       else {
         swblog.warn(client.remote + " sent invalid command:", client.cmdstr);
-        //clientdisconn();
-        //return;
+        clientdisconn();
+        return;
       }
       client.cmdstr = "";
     }
