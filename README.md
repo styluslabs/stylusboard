@@ -8,7 +8,7 @@ To connect to a different server and/or with a different username than the defau
 [user[:password]@server/]whiteboard_id
 ```
 
-Run `node.js whiteboard.js`.  Tested with node.js 12.18.3 (and 0.10.36)
+Usage: Install node.js and npm, clone this repo and run `npm install`, then run `node whiteboard.js`.  Tested with node.js 12.18.3 (and 0.10.36)
 
 Linux executable packaged with jx: http://www.styluslabs.com/write/stylusboard (Download and run this to get started quickly).
 
